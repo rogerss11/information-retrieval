@@ -1,63 +1,53 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-import os
-from dotenv import load_dotenv
-from openai import OpenAI
-
+import json
+from sentence_transformers import SentenceTransformer
 app = FastAPI()
-
-CAMPUSAI_API_KEY = os.getenv("CAMPUSAI_API_KEY")
-if not CAMPUSAI_API_KEY:
-    from dotenv import load_dotenv
-    load_dotenv(os.path.expanduser("~/.env"))
-    CAMPUSAI_API_KEY = os.getenv("CAMPUSAI_API_KEY")
-
-client = OpenAI(
-    api_key=CAMPUSAI_API_KEY,
-    base_url="https://campusai.compute.dtu.dk/api"
-)
-
-history = []
 
 class TextInput(BaseModel):
     text: str
 
-def campusai_extract_persons(text):
-    prompt = f"""Extract all the person names from the text provided below.:
-    Return the names as a list of names separated by #.
-    Example: <name1>#<name2>#...
-    Return only the list. No additional text.
-    If no names are found, return an empty list. Text: {text}"""
+@app.post("/v1/courses/{course_id}/similar?top_k=10&mode=dense|sparse|hybrid&alpha=0.5")
+def find_similar_courses(text: TextInput):
+    lowered_text = text.text.lower()
+    pass
 
-    history.append({"role": "user", "content": prompt})
-    response = client.chat.completions.create(
-        model="gemma3:latest",
-        messages=history,
-        stream=False  # explicitly disable streaming
-    )
-    reply = response.choices[0].message.content.split("#")
-    print(reply)
-    filtered_reply = [x for x in reply if x]
-    return filtered_reply
+@app.post("/v1/search?query=machine%20learning&top_k=10&mode=dense|sparse|hybrid&alpha=0.5")
+def search_courses(query: str):
+    lowered_query = query.lower()
+    pass
 
-@app.post("/v1/extract-persons")
-def extract_persons(text: TextInput):
-    reply = campusai_extract_persons(text.text)
-    return {"persons": reply}
+@app.post("/v1/objectives/search?query=dimensionality%20reduction&top_k=10&mode=dense|sparse|hybrid&alpha=0.5")
+def search_objectives(query: str):
+    lowered_query = query.lower()
+    pass
+
+@app.post("/v1/health")
+def health_check():
+    return {"status": "healthy"}
 
 if __name__ == "__main__":
-    print("Enter ’exit’ to end the session.")
-    while True:
-        # Prompt the user
-        user_input = input(" You : ")
-        if user_input.lower() == "exit":
-            break
-        history.append({"role": "user", "content": user_input})
-        response = client.chat.completions.create(
-            model="gemma3:latest",
-            messages=history,
-            stream=False  # explicitly disable streaming
-        )
-        reply = response.choices[0].message.content
-        print(f"Assistant: {reply}" + "\n" + "-" * 40)
-        history.append({"role": "assistant", "content": reply})
+
+    QUERY = "machine learning"
+    model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+    with open("courses.json", "r") as f:
+        courses = json.load(f)
+    
+    print("Loaded courses.json with", len(courses), "courses.")
+    for course in courses:
+        embedded_objectives = model.encode(courses[course]["learning-objectives"], convert_to_tensor=True)
+        courses[course]["embedded_objectives"] = embedded_objectives
+        courses[course]["embedded_title"] = model.encode(courses[course]["title"], convert_to_tensor=True)
+    print(courses[course]["embedded_title"].shape)
+    print(courses[course]["embedded_objectives"].shape)
+    print("Courses and objectives have been embedded.")
+    query_embedding = model.encode(QUERY, convert_to_tensor=True)
+    similarities = {}
+    for course in courses:
+        title_embedding = courses[course]["embedded_title"]
+        similarity = (query_embedding @ title_embedding.T).item()
+        similarities[course] = similarity
+    sorted_similarities = sorted(similarities.items(), key=lambda x: x[1], reverse=True)
+    print("Top courses for query:", QUERY)
+    for course, sim in sorted_similarities[:10]:
+        print(f"Course ID: {course}, Similarity: {sim:.4f}, Title: {courses[course]['title']}")

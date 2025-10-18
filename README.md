@@ -38,7 +38,7 @@ Endpoints
 ---------
 Choose one or more of the endpoints.
 
-- Similar courses given a course ID
+- Similar courses given a course ID  -> Get title and/or objectives, encode, compare with other courses, return course id+title.
 
 `GET /v1/courses/{course_id}/similar?top_k=10&mode=dense|sparse|hybrid&alpha=0.5`
 
@@ -54,7 +54,7 @@ Choose one or more of the endpoints.
 }
 ```
 
-- Search courses by free text query
+- Search courses by free text query -> Compare query with title &/or objectives. Return course id + title
 
 `GET /v1/search?query=machine%20learning&top_k=10&mode=dense|sparse|hybrid&alpha=0.5`
 
@@ -69,7 +69,7 @@ Choose one or more of the endpoints.
 }
 ```
 
-- Search learning objectives (return objective + course)
+- Search learning objectives (return objective + course) -> Compare query with each individual course objective. Return course id + title + specific objective.
 
 `GET /v1/objectives/search?query=dimensionality%20reduction&top_k=10&mode=dense|sparse|hybrid&alpha=0.5`
 
@@ -83,7 +83,7 @@ Choose one or more of the endpoints.
 }
 ```
 
-- Health check (optional)
+- Health check (optional)  ??
 
 `GET /v1/health`
 
