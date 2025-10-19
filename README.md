@@ -89,7 +89,12 @@ Choose one or more of the endpoints.
 
 {"status": "ok", "index_sizes": {"courses": 55, "objectives": 600}}
 
-
+Running
+-------
+```
+docker build -t info-retrieval .
+docker run -p 8000:8000 info-retrieval
+```
 Testing
 -------
 Similar courses
